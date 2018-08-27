@@ -3,11 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "emotion": "^9.2.6",
+    "immutable": "^3.8.2",
+    "is-hotkey": "^0.1.3",
+    "material-icons": "^0.2.3",
     "react": "^16.4.2",
     "react-dom": "^16.4.2",
+    "react-emotion": "^9.2.6",
     "react-scripts": "1.1.5",
     "semantic-ui-css": "^2.3.3",
-    "semantic-ui-react": "^0.82.3"
+    "semantic-ui-react": "^0.82.3",
+    "slate": "^0.40.2",
+    "slate-react": "^0.18.3"
   },
   "scripts": {
     "start": "react-scripts start",

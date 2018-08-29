@@ -1,8 +1,10 @@
 import React, { Component } from 'react';
 import { Editor as SlateEditor } from 'slate-react';
-import { Value } from 'slate';
+import { Block, Value } from 'slate';
 import { Button } from '../button';
 import { Toolbar } from '../toolbar';
+import { FileInputButton } from '../file_input';
+import { Image } from '../image';
 import { isKeyHotkey } from 'is-hotkey';
 
 import './style.css';
@@ -62,7 +64,7 @@ export default class Editor extends Component {
 		return (
 			<Button
 				active={isActive}
-				onMouseDown={event => isActive && this.onClickMark(event, type)}
+				onMouseDown={event => this.onClickMark(event, type)}
 				icon={icon}
 			/>
 		);
@@ -80,7 +82,7 @@ export default class Editor extends Component {
 		return (
 			<Button
 				active={isActive}
-				onMouseDown={event => isActive && this.onClickBlock(event, type)}
+				onMouseDown={event => this.onClickBlock(event, type)}
 				icon={icon}
 			/>
 		);
@@ -103,14 +105,25 @@ export default class Editor extends Component {
 			<Button
 				right
 				active={isActive}
-				onMouseDown={event => isActive && this.onClickAction(event, type)}
+				onMouseDown={event => isActive? (this.onClickAction(event, type) || true) : true}
 				icon={icon}
 			/>
 		);
 	}
 
+	renderImageButton = (icon)=> {
+		return (
+			<FileInputButton
+				active={false}
+				icon={icon}
+				accept="image/*"
+				onChange={event =>this.onImageSelect(event)}
+			/>
+		);
+	}
+
 	renderNode = props => {
-		const { attributes, children, node } = props;
+		const { attributes, children, node, isFocused } = props;
 
 		switch (node.type) {
 			case 'block-quote':
@@ -125,6 +138,9 @@ export default class Editor extends Component {
 				return <li {...attributes}>{children}</li>;
 			case 'numbered-list':
 				return <ol {...attributes}>{children}</ol>;
+			case 'image':
+				const src = node.data.get('src');
+				return <Image src={src} selected={isFocused} {...attributes} />;
 			default:
 				return null;
 		}
@@ -148,12 +164,9 @@ export default class Editor extends Component {
 	}
 
 	onChange = ({ value }) => {
-		let { hasChange } = this.state;
-		if (!hasChange && value.document !== this.state.value.document) {
-			hasChange = true;
-		}
-		
-		this.setState({ value, hasChange: hasChange });
+		let hasChange  = value.document !== this.state.value.document;
+
+		this.setState({ value, hasChange });
 	}
 
 	onKeyDown = (event, change) => {
@@ -232,20 +245,33 @@ export default class Editor extends Component {
 		event.preventDefault();
 
 		if (type === 'save') {
-			const value = this.state.value;
+			const {value} = this.state;
 			const content = JSON.stringify(value.toJSON());
 			localStorage.setItem('content', content);
-			this.setState({ hasChange: false });
-			return
+			this.onChange({value});
 		}
 
 		if (type === 'restore') {
 			const existingValue = JSON.parse(localStorage.getItem('content'));
 			const value = Value.fromJSON(existingValue || emptyDoc );
-			
-			this.setState({ value, hasChange: false });
+			this.onChange({value});
+		}
+	}
+
+	onImageSelect = (event) => {
+		event.preventDefault();
+
+		let file = event.target.files[0];
+		if (!file) {
 			return
 		}
+
+		const reader = new FileReader();
+		reader.addEventListener('load', () => {
+			const change = this.state.value.change().call(insertImage, reader.result);
+			this.onChange(change);
+		})
+		reader.readAsDataURL(file)
 	}
 
 	render() {
@@ -261,6 +287,7 @@ export default class Editor extends Component {
 					{this.renderBlockButton('block-quote', 'format_quote')}
 					{this.renderBlockButton('numbered-list', 'format_list_numbered')}
 					{this.renderBlockButton('bulleted-list', 'format_list_bulleted')}
+					{this.renderImageButton('image')}
 					{this.renderActionButton('restore', 'clear')}
 					{this.renderActionButton('save', 'save')}
 				</Toolbar>
@@ -268,6 +295,7 @@ export default class Editor extends Component {
 					spellCheck
 					autoFocus
 					placeholder="Enter some rich text..."
+					schema={schema}
 					value={this.state.value}
 					onChange={this.onChange}
 					onKeyDown={this.onKeyDown}
@@ -277,4 +305,35 @@ export default class Editor extends Component {
 			</div>
 		);
 	}
+}
+
+function insertImage(change, src, target) {
+	if (target) {
+		change.select(target);
+	}
+
+	change.insertBlock({
+		type: 'image',
+		data: { src },
+	});
+}
+
+const schema = {
+	document: {
+		last: { type: 'paragraph' },
+		normalize: (change, { code, node }) => {
+			switch (code) {
+				case 'last_child_type_invalid': {
+					const paragraph = Block.create('paragraph')
+					return change.insertNodeByKey(node.key, node.nodes.size, paragraph)
+				}
+				default:
+			}
+		},
+	},
+	blocks: {
+		image: {
+			isVoid: true,
+		},
+	},
 }

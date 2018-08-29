@@ -13,7 +13,7 @@ class App extends Component {
 			<Container text>
 				<Header as="h2">Simple Slate</Header>
 				<Editor
-					maxNodes={3}
+					// maxNodes={10}
 				/>
 			</Container>
 		);

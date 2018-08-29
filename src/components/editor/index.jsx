@@ -164,8 +164,11 @@ export default class Editor extends Component {
 		}
 	}
 
-	onChange = ({ value }) => {
-		let hasChange  = value.document !== this.state.value.document;
+	onChange = ({ value, saved }) => {
+		let hasChange = this.state.hasChange || (value.document !== this.state.value.document);
+		if (saved) {
+			hasChange = false
+		}
 
 		this.setState({ value, hasChange });
 	}
@@ -259,13 +262,13 @@ export default class Editor extends Component {
 			const {value} = this.state;
 			const content = JSON.stringify(value.toJSON());
 			localStorage.setItem('content', content);
-			this.onChange({value});
+			this.onChange({value, saved: true});
 		}
 
 		if (type === 'restore') {
 			const existingValue = JSON.parse(localStorage.getItem('content'));
 			const value = Value.fromJSON(existingValue || emptyDoc );
-			this.onChange({value});
+			this.onChange({value, saved: true });
 		}
 	}
 

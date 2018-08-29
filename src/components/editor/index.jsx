@@ -62,7 +62,7 @@ export default class Editor extends Component {
 		return (
 			<Button
 				active={isActive}
-				onClick={event => this.onClickMark(event, type)}
+				onMouseDown={event => isActive && this.onClickMark(event, type)}
 				icon={icon}
 			/>
 		);
@@ -80,18 +80,30 @@ export default class Editor extends Component {
 		return (
 			<Button
 				active={isActive}
-				onClick={event => this.onClickBlock(event, type)}
+				onMouseDown={event => isActive && this.onClickBlock(event, type)}
 				icon={icon}
 			/>
 		);
 	}
 
 	renderActionButton = (type, icon) => {
+		let { maxNodes } = this.props;
+		let { value, hasChange } = this.state;
+		let isActive = hasChange;
+		const nodes = value.document.nodes.size;
+
+		if (type === 'save'
+			&& isActive
+			&& maxNodes
+			&& maxNodes < nodes) {
+				isActive = false;
+		}
+
 		return (
 			<Button
 				right
-				active={this.state.hasChange}
-				onClick={event => this.onClickAction(event, type)}
+				active={isActive}
+				onMouseDown={event => isActive && this.onClickAction(event, type)}
 				icon={icon}
 			/>
 		);
@@ -136,8 +148,8 @@ export default class Editor extends Component {
 	}
 
 	onChange = ({ value }) => {
-		let hasChange = false;
-		if (value.document !== this.state.value.document) {
+		let { hasChange } = this.state;
+		if (!hasChange && value.document !== this.state.value.document) {
 			hasChange = true;
 		}
 		
@@ -224,6 +236,7 @@ export default class Editor extends Component {
 			const content = JSON.stringify(value.toJSON());
 			localStorage.setItem('content', content);
 			this.setState({ hasChange: false });
+			return
 		}
 
 		if (type === 'restore') {
@@ -231,6 +244,7 @@ export default class Editor extends Component {
 			const value = Value.fromJSON(existingValue || emptyDoc );
 			
 			this.setState({ value, hasChange: false });
+			return
 		}
 	}
 

@@ -12,7 +12,9 @@ class App extends Component {
 		return (
 			<Container text>
 				<Header as="h2">Simple Slate</Header>
-				<Editor />
+				<Editor
+					maxNodes={3}
+				/>
 			</Container>
 		);
 	}

@@ -8,9 +8,9 @@ const Icon = styled(({ className, ...rest }) => {
 	vertical-align: text-bottom;
 `
 
-export const Button = styled(({ className, icon }) => {
+export const Button = styled(({ className, icon, onClick }) => {
 	return (
-		<span className={className} >
+		<span className={className} onClick={onClick} >
 			<Icon>{icon}</Icon>
 		</span>
 	);

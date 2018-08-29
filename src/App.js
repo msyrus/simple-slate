@@ -5,8 +5,6 @@ import Editor from './components/editor';
 
 import 'semantic-ui-css/semantic.min.css';
 
-import value from './values.json';
-
 class App extends Component {
 	render() {
 		document.title = "Simple Slate";
@@ -14,9 +12,7 @@ class App extends Component {
 		return (
 			<Container text>
 				<Header as="h2">Simple Slate</Header>
-				<Editor
-					value={value}
-				/>
+				<Editor />
 			</Container>
 		);
 	}

@@ -14,14 +14,36 @@ const isItalicHotkey = isKeyHotkey('mod+i');
 const isUnderlinedHotkey = isKeyHotkey('mod+u');
 const isCodeHotkey = isKeyHotkey('mod+`');
 
+const emptyDoc = {
+	document: {
+		nodes: [
+			{
+				object: 'block',
+				type: 'paragraph',
+				nodes: [
+					{
+						object: 'text',
+						leaves: [
+							{
+								text: "",
+							}
+						],
+					},
+				],
+			},
+		],
+	},
+};
+
 export default class Editor extends Component {
 
 	constructor(props) {
 		super(props);
 
-		if (props.value) {
-			this.state = { value: Value.fromJSON(props.value) };
-		}
+		const existingValue = JSON.parse(localStorage.getItem('content'));
+		const value = Value.fromJSON(existingValue || emptyDoc);
+
+		this.state = { value, hasChange: false};
 	}
 
 	hasMark = type => {
@@ -40,7 +62,7 @@ export default class Editor extends Component {
 		return (
 			<Button
 				active={isActive}
-				onMouseDown={event => this.onClickMark(event, type)}
+				onClick={event => this.onClickMark(event, type)}
 				icon={icon}
 			/>
 		);
@@ -58,7 +80,7 @@ export default class Editor extends Component {
 		return (
 			<Button
 				active={isActive}
-				onMouseDown={event => this.onClickBlock(event, type)}
+				onClick={event => this.onClickBlock(event, type)}
 				icon={icon}
 			/>
 		);
@@ -68,7 +90,8 @@ export default class Editor extends Component {
 		return (
 			<Button
 				right
-				onMouseDown={event => this.onClickAction(event, type)}
+				active={this.state.hasChange}
+				onClick={event => this.onClickAction(event, type)}
 				icon={icon}
 			/>
 		);
@@ -113,7 +136,12 @@ export default class Editor extends Component {
 	}
 
 	onChange = ({ value }) => {
-		this.setState({ value });
+		let hasChange = false;
+		if (value.document !== this.state.value.document) {
+			hasChange = true;
+		}
+		
+		this.setState({ value, hasChange: hasChange });
 	}
 
 	onKeyDown = (event, change) => {
@@ -189,7 +217,21 @@ export default class Editor extends Component {
 	}
 
 	onClickAction = (event, type) => {
+		event.preventDefault();
 
+		if (type === 'save') {
+			const value = this.state.value;
+			const content = JSON.stringify(value.toJSON());
+			localStorage.setItem('content', content);
+			this.setState({ hasChange: false });
+		}
+
+		if (type === 'restore') {
+			const existingValue = JSON.parse(localStorage.getItem('content'));
+			const value = Value.fromJSON(existingValue || emptyDoc );
+			
+			this.setState({ value, hasChange: false });
+		}
 	}
 
 	render() {
@@ -205,8 +247,8 @@ export default class Editor extends Component {
 					{this.renderBlockButton('block-quote', 'format_quote')}
 					{this.renderBlockButton('numbered-list', 'format_list_numbered')}
 					{this.renderBlockButton('bulleted-list', 'format_list_bulleted')}
-					{this.renderActionButton('bulleted-list', 'clear')}
-					{this.renderActionButton('numbered-list', 'save')}
+					{this.renderActionButton('restore', 'clear')}
+					{this.renderActionButton('save', 'save')}
 				</Toolbar>
 				<SlateEditor
 					spellCheck

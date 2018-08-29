@@ -15,6 +15,7 @@ const isBoldHotkey = isKeyHotkey('mod+b');
 const isItalicHotkey = isKeyHotkey('mod+i');
 const isUnderlinedHotkey = isKeyHotkey('mod+u');
 const isCodeHotkey = isKeyHotkey('mod+`');
+const isIndentHotkey = isKeyHotkey('tab');
 
 const emptyDoc = {
 	document: {
@@ -180,13 +181,19 @@ export default class Editor extends Component {
 			mark = 'underlined';
 		} else if (isCodeHotkey(event)) {
 			mark = 'code';
-		} else {
-			return;
 		}
 
-		event.preventDefault();
-		change.toggleMark(mark);
-		return true;
+		if (mark) {
+			event.preventDefault();
+			change.toggleMark(mark);
+			return true;
+		}
+
+		if (isIndentHotkey(event)) {
+			event.preventDefault()
+			this.onIndent(!event.shiftKey)
+			return true;
+		}
 	}
 
 	onClickMark = (event, type) => {
@@ -200,7 +207,6 @@ export default class Editor extends Component {
 		event.preventDefault();
 		const { value } = this.state;
 		const change = value.change();
-		const { document } = value;
 
 		// Handle everything but list buttons.
 		if (type !== 'bulleted-list' && type !== 'numbered-list') {
@@ -218,19 +224,24 @@ export default class Editor extends Component {
 		} else {
 			// Handle the extra wrapping required for list buttons.
 			const isList = this.hasBlock('list-item');
-			const isType = value.blocks.some(block => {
-				return !!document.getClosest(block.key, parent => parent.type === type);
-			});
+			const parent = value.document.getParent(value.blocks.first().key);
+			const isType = (parent && parent.type === type);
 
 			if (isList && isType) {
 				change
-					.setBlocks(DEFAULT_NODE)
-					.unwrapBlock('bulleted-list')
-					.unwrapBlock('numbered-list');
+					.unwrapBlock(type);
+
+				let { value } = change;
+				let parent = value.document.getParent(value.blocks.first().key);
+				if (!parent || !(['numbered-list', 'bulleted-list'].includes(parent.type))) {
+					change
+						.setBlocks(DEFAULT_NODE)
+				}
+
 			} else if (isList) {
 				change
 					.unwrapBlock(
-						type === 'bulleted-list' ? 'numbered-list' : 'bulleted-list'
+						(type === 'bulleted-list') ? 'numbered-list' : 'bulleted-list'
 					)
 					.wrapBlock(type);
 			} else {
@@ -257,6 +268,45 @@ export default class Editor extends Component {
 			this.onChange({value});
 		}
 	}
+
+	onIndent = (front) => {
+		const { value } = this.state;
+		const change = value.change();
+
+		if (!this.hasBlock('list-item')) {
+			if (!front || !this.hasBlock(DEFAULT_NODE)) {
+				return;
+			}
+			change.setBlocks('list-item').wrapBlock('bulleted-list');
+			this.onChange(change);
+			return;
+		}
+
+		const parent = value.document.getParent(value.blocks.first().key);
+		const { type } = parent;
+
+		if (front) {
+			if (change.value.document.getDepth(parent.key) >= 3) {
+				return;
+			}
+
+			change
+				.wrapBlock(type);
+		} else {
+			change
+				.unwrapBlock(type);
+
+			let { value } = change;
+			let parent = value.document.getParent(value.blocks.first().key);
+			if (!parent || !(['numbered-list', 'bulleted-list'].includes(parent.type))) {
+				change
+					.setBlocks(DEFAULT_NODE)
+			}
+		}
+
+		this.onChange(change);
+	}
+
 
 	onImageSelect = (event) => {
 		event.preventDefault();

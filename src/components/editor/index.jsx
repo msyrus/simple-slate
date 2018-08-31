@@ -118,7 +118,7 @@ export default class Editor extends Component {
 				active={false}
 				icon={icon}
 				accept="image/*"
-				onChange={event =>this.onImageSelect(event)}
+				onChange={event =>this.onImageSelect('image_file', event)}
 			/>
 		);
 	}
@@ -311,20 +311,31 @@ export default class Editor extends Component {
 	}
 
 
-	onImageSelect = (event) => {
+	onImageSelect = (type, event) => {
 		event.preventDefault();
 
-		let file = event.target.files[0];
-		if (!file) {
+		if (type === 'image_link') {
+			const src = window.prompt('Enter the URL of the image:')
+			if (!src) return
+
+			const change = this.state.value.change().call(insertImage, src)
+			this.onChange(change)
 			return
 		}
 
-		const reader = new FileReader();
-		reader.addEventListener('load', () => {
-			const change = this.state.value.change().call(insertImage, reader.result);
-			this.onChange(change);
-		})
-		reader.readAsDataURL(file)
+		if (type === 'image_file') {
+			let file = event.target.files[0];
+			if (!file) {
+				return
+			}
+
+			const reader = new FileReader();
+			reader.addEventListener('load', () => {
+				const change = this.state.value.change().call(insertImage, reader.result);
+				this.onChange(change);
+			})
+			reader.readAsDataURL(file)
+		}
 	}
 
 	render() {
@@ -340,6 +351,7 @@ export default class Editor extends Component {
 					{this.renderBlockButton('block-quote', 'format_quote')}
 					{this.renderBlockButton('numbered-list', 'format_list_numbered')}
 					{this.renderBlockButton('bulleted-list', 'format_list_bulleted')}
+					<Button onMouseDown={event => this.onImageSelect('image_link', event)} icon='add_photo_alternate' />
 					{this.renderImageButton('image')}
 					{this.renderActionButton('restore', 'clear')}
 					{this.renderActionButton('save', 'save')}
